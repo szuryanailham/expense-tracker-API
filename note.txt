@@ -1,0 +1,11 @@
+algoritma membuat authentikasi
+
+- membuat middleware seleksi router - 
+    if atuhentikasi maka status authentikasi
+    if not maka status not auathenticated
+
+- create register user that generate token JWT
+
+- create login user that generate and matching token JWT
+    if success show success login
+    if failed show failed login
