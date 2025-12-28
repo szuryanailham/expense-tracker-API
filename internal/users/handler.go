@@ -10,10 +10,10 @@ import (
 )
 
 type handler struct {
-	service Service
+	service AuthService
 }
 
-func NewHandler(service Service) *handler {
+func NewHandler(service AuthService) *handler {
 	return &handler{
 		service: service,
 	}
@@ -82,8 +82,9 @@ func ( h*handler)Authentication(w http.ResponseWriter, r *http.Request){
 	}
 
 	json.Write(w, http.StatusOK, map[string]string{
-		"user_id": userID,
-		"message": "this is protected endpoint",
-	})
+	"user_id": userID.String(),
+	"message": "this is protected endpoint",
+})
+
 }
 

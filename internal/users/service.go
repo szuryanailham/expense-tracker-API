@@ -9,7 +9,7 @@ import (
 	"github.com/szuryanailham/expense-tracker/internal/env"
 )
 
-type Service interface {
+type AuthService interface {
 	Register(ctx context.Context, arg repo.CreateUserParams) (RegisterResult, error)
 	Login(ctx context.Context, arg LoginParams) (LoginResult, error)
 }
@@ -21,7 +21,7 @@ type svc struct {
 	repo repo.Querier
 }
 
-func NewService(repo repo.Querier)Service{
+func NewService(repo repo.Querier)AuthService{
 	return &svc{repo: repo}
 }
 

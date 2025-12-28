@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/szuryanailham/expense-tracker/internal/auth"
 	"github.com/szuryanailham/expense-tracker/internal/env"
 )
@@ -26,24 +27,25 @@ func JWTAuth(next http.Handler) http.Handler {
 			http.Error(w, "invalid authorization format", http.StatusUnauthorized)
 			return
 		}
-		log.Println("JWT_SECRET:", env.GetString("JWT_SECRET",""))
-
 		userID, err := auth.ParseJWT(
 			parts[1],
 			[]byte(env.GetString("JWT_SECRET","")),
 		)
-
+		parsedUUID, err := uuid.Parse(userID)
 		if err != nil {
-			log.Println("JWT PARSE ERROR:", err)
-			http.Error(w, "invalid or expired token", http.StatusUnauthorized)
+			http.Error(w, "invalid user id", http.StatusUnauthorized)
 			return
 		}
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
+		pgUUID := pgtype.UUID{
+			Bytes: parsedUUID,
+			Valid: true,
+		}
+		ctx := context.WithValue(r.Context(), userIDKey, pgUUID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 		})
 }
 
-	func GetUserID(ctx context.Context) (string, bool) {
-		userID, ok := ctx.Value(userIDKey).(string)
-		return userID, ok
-	}
+	func GetUserID(ctx context.Context) (pgtype.UUID, bool) {
+	userID, ok := ctx.Value(userIDKey).(pgtype.UUID)
+	return userID, ok
+}

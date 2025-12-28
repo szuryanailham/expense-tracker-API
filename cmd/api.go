@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	repo "github.com/szuryanailham/expense-tracker/internal/adapters/sqlc"
+	"github.com/szuryanailham/expense-tracker/internal/categories"
 	authMiddleware "github.com/szuryanailham/expense-tracker/internal/middleware"
 	"github.com/szuryanailham/expense-tracker/internal/users"
 )
@@ -34,6 +35,8 @@ func (app *application) mount() http.Handler {
 		queries := repo.New(app.db)
 		userService := users.NewService(queries)
 		userHandler := users.NewHandler(userService)
+		categoryService := categories.NewService(queries)
+		categoryHandler := categories.NewHandler(categoryService)
 
 		r.Post("/register", userHandler.Register)
 		r.Post("/login", userHandler.Login)
@@ -41,11 +44,7 @@ func (app *application) mount() http.Handler {
 		// ===== PROTECTED =====
 		r.Route("/", func(r chi.Router) {
 			r.Use(authMiddleware.JWTAuth)
-			r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("hello world"))
-		})
-		
+			r.Get("/categories", categoryHandler.GetCategoriesById)
 		})
 	})
 
