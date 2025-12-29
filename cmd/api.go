@@ -45,6 +45,8 @@ func (app *application) mount() http.Handler {
 		r.Route("/", func(r chi.Router) {
 			r.Use(authMiddleware.JWTAuth)
 			r.Get("/categories", categoryHandler.GetCategoriesById)
+			r.Post("/categories", categoryHandler.CreateCategory)
+			r.Put("/categories/{id}", categoryHandler.UpdateCategory)
 		})
 	})
 

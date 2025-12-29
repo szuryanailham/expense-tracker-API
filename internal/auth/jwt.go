@@ -44,6 +44,13 @@ func ParseJWT(tokenStr string, secret []byte)(string, error) {
 	if !ok {
 		return "", errors.New("user_id not found")
 	}
+	exp, ok := claims["expiredAt"].(float64)
+	if !ok {
+		return "", errors.New("exp claim not found")
+	}
+	if int64(exp) < time.Now().Unix() {
+		return "", errors.New("token expired")
+	}
 	return userID, nil
 }
 

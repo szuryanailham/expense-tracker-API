@@ -32,7 +32,7 @@ func main() {
 		panic(err)
 	}
 	defer conn.Close(ctx)
-	logger.Info("database connected to database", "dsn", cfg.db.dsn)
+	logger.Info("database connected to database", "dsn", cfg.addr)
 	
 	api:= application{
 		config: cfg,

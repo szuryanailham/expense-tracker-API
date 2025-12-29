@@ -27,10 +27,16 @@ func JWTAuth(next http.Handler) http.Handler {
 			http.Error(w, "invalid authorization format", http.StatusUnauthorized)
 			return
 		}
-		userID, err := auth.ParseJWT(
-			parts[1],
-			[]byte(env.GetString("JWT_SECRET","")),
-		)
+		userID, err := auth.ParseJWT(parts[1], []byte(env.GetString("JWT_SECRET","")))
+		if err != nil {
+			if err.Error() == "token expired" {
+				http.Error(w, "JWT expired", http.StatusUnauthorized)
+				return
+			}
+			http.Error(w, "JWT invalid", http.StatusUnauthorized)
+			return
+		}
+
 		parsedUUID, err := uuid.Parse(userID)
 		if err != nil {
 			http.Error(w, "invalid user id", http.StatusUnauthorized)
