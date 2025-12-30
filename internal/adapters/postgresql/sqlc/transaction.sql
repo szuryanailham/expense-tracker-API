@@ -19,12 +19,14 @@ RETURNING
     created_at,
     updated_at;
 
+
 -- name: ListTransactionsByUser :many
 SELECT
     t.id,
     t.user_id,
     t.category_id,
     c.name AS category_name,
+    c.type AS category_type,
     t.amount_cents,
     t.note,
     t.transaction_date,
@@ -40,6 +42,7 @@ SELECT
     t.user_id,
     t.category_id,
     c.name AS category_name,
+    c.type AS category_type,
     t.amount_cents,
     t.note,
     t.transaction_date,
@@ -49,25 +52,26 @@ JOIN categories c ON c.id = t.category_id
 WHERE t.id = $1
   AND t.user_id = $2;
 
-  -- name: UpdateTransaction :one
+
+-- name: UpdateTransaction :one
 UPDATE transactions
 SET
     category_id = $1,
     amount_cents = $2,
-    type = $3,
-    note = $4,
-    transaction_date = $5
-WHERE id = $6
-  AND user_id = $7
+    note = $3,
+    transaction_date = $4,
+    updated_at = NOW()
+WHERE id = $5
+  AND user_id = $6
 RETURNING
     id,
     user_id,
     category_id,
     amount_cents,
-    type,
     note,
     transaction_date,
-    created_at;
+    created_at,
+    updated_at;
 
 
 -- name: DeleteTransaction :execrows
@@ -77,17 +81,29 @@ WHERE id = $1
 
 -- name: GetTransactionSummary :one
 SELECT
-    COALESCE(SUM(CASE WHEN type = 'income' THEN amount_cents ELSE 0 END), 0) AS total_income,
-    COALESCE(SUM(CASE WHEN type = 'expense' THEN amount_cents ELSE 0 END), 0) AS total_expense
-FROM transactions
-WHERE user_id = $1;
+    COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount_cents ELSE 0 END), 0) AS total_income,
+    COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount_cents ELSE 0 END), 0) AS total_expense
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = $1;
 
 -- name: GetMonthlySummary :many
 SELECT
-    DATE_TRUNC('month', transaction_date) AS month,
-    SUM(CASE WHEN type = 'income' THEN amount_cents ELSE 0 END) AS total_income,
-    SUM(CASE WHEN type = 'expense' THEN amount_cents ELSE 0 END) AS total_expense
-FROM transactions
-WHERE user_id = $1
+    DATE_TRUNC('month', t.transaction_date)::DATE AS month,
+
+    COALESCE(
+        SUM(CASE WHEN c.type = 'income' THEN t.amount_cents ELSE 0 END),
+        0
+    ) AS total_income,
+
+    COALESCE(
+        SUM(CASE WHEN c.type = 'expense' THEN t.amount_cents ELSE 0 END),
+        0
+    ) AS total_expense
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = $1
 GROUP BY month
-ORDER BY month DESC;
+ORDER BY month;
+
+

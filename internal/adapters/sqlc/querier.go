@@ -25,6 +25,7 @@ type Querier interface {
 	ListCategoriesByUser(ctx context.Context, userID pgtype.UUID) ([]Category, error)
 	ListTransactionsByUser(ctx context.Context, userID pgtype.UUID) ([]ListTransactionsByUserRow, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
+	UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (Transaction, error)
 }
 
 var _ Querier = (*Queries)(nil)

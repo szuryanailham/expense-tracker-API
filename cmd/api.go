@@ -12,6 +12,7 @@ import (
 	repo "github.com/szuryanailham/expense-tracker/internal/adapters/sqlc"
 	"github.com/szuryanailham/expense-tracker/internal/categories"
 	authMiddleware "github.com/szuryanailham/expense-tracker/internal/middleware"
+	"github.com/szuryanailham/expense-tracker/internal/transactions"
 	"github.com/szuryanailham/expense-tracker/internal/users"
 )
 
@@ -37,16 +38,29 @@ func (app *application) mount() http.Handler {
 		userHandler := users.NewHandler(userService)
 		categoryService := categories.NewService(queries)
 		categoryHandler := categories.NewHandler(categoryService)
-
+		transactionsService :=transactions.NewService(queries)
+		transactionsHandler := transactions.NewHandler(transactionsService)
 		r.Post("/register", userHandler.Register)
 		r.Post("/login", userHandler.Login)
 
 		// ===== PROTECTED =====
 		r.Route("/", func(r chi.Router) {
 			r.Use(authMiddleware.JWTAuth)
+			// Routes of categories
 			r.Get("/categories", categoryHandler.GetCategoriesById)
 			r.Post("/categories", categoryHandler.CreateCategory)
 			r.Put("/categories/{id}", categoryHandler.UpdateCategory)
+			r.Delete("/categories/{id}", categoryHandler.DeleteCategory)
+			r.Get("/categories/{id}/detail", categoryHandler.FindCategoryByID)
+
+				// Routes of transaction
+			r.Get("/transactions", transactionsHandler.GetCategoriesById)
+			r.Post("/transactions", transactionsHandler.CreateTransaction)
+			r.Put("/transactions/{id}", transactionsHandler.UpdateTransaction)
+			r.Delete("/transactions/{id}", transactionsHandler.DeleteTransaction)
+			r.Get("/transactions/{id}/detail", transactionsHandler.FindTransctionByID)
+			r.Get("/month-summary", transactionsHandler.GetMonthlySummary)
+			r.Get("/transactions-summary", transactionsHandler.GetTransactionSummary)
 		})
 	})
 

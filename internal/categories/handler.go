@@ -85,29 +85,91 @@ func(h* handler)UpdateCategory(w http.ResponseWriter, r *http.Request){
 	categoryID := pgtype.UUID{
     Bytes: parsedUUID,
     Valid: true,
-}
+	}
 	var tempCategory UpdateCategoryRequest
 	if err := json.Read(r, &tempCategory);err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	category, err := h.service.UpdateCategory(r.Context(), repo.UpdateCategoryParams{
 		ID:     categoryID,
 		UserID: userID,          
 		Name:   tempCategory.Name,
 		Type:   tempCategory.Type,
 	})
-
 	if err != nil {
 		http.Error(w, "failed to update category", http.StatusInternalServerError)
 		return
 	}
-
 	 json.Write(w, http.StatusCreated, CreateCategoryResponse{
         Status:  "success",
         Message: "Category updated successfully",
+        Data:    category,
+    })
+}
+
+func(h *handler)DeleteCategory(w http.ResponseWriter,r *http.Request){
+	categoryIDStr := chi.URLParam(r, "id")
+	parsedUUID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		http.Error(w, "invalid category id", http.StatusBadRequest)
+		return
+	}
+	categoryID := pgtype.UUID{
+		Bytes: parsedUUID,
+		Valid: true,
+	}
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	category, err := h.service.DeleteCategory(r.Context(),repo.DeleteCategoryParams{
+		ID:categoryID ,
+		UserID: userID,
+	})
+	if err != nil {
+		http.Error(w, "failed to delete category", http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusCreated, CreateCategoryResponse{
+        Status:  "success",
+        Message: "Category deleted successfully.",
+        Data:    category,
+    })
+}
+
+func(h *handler)FindCategoryByID(w http.ResponseWriter,r *http.Request){
+	categoryIDStr := chi.URLParam(r, "id")
+	parsedUUID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		http.Error(w, "invalid category id", http.StatusBadRequest)
+		return
+	}
+	categoryID := pgtype.UUID{
+		Bytes: parsedUUID,
+		Valid: true,
+	}
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	category, err := h.service.FindCategoryByID(r.Context(),repo.FindCategoryByIDParams{
+		ID:categoryID ,
+		UserID: userID,
+	})
+
+	if err != nil {
+		http.Error(w, "failed to Find Category by ID", http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusCreated, CreateCategoryResponse{
+        Status:  "success",
+        Message: "Category details retrieved successfully",
         Data:    category,
     })
 

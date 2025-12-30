@@ -88,6 +88,7 @@ SELECT
     t.user_id,
     t.category_id,
     c.name AS category_name,
+    c.type AS category_type,
     t.amount_cents,
     t.note,
     t.transaction_date,
@@ -108,6 +109,7 @@ type FindTransactionByIDRow struct {
 	UserID          pgtype.UUID        `json:"user_id"`
 	CategoryID      pgtype.UUID        `json:"category_id"`
 	CategoryName    string             `json:"category_name"`
+	CategoryType    string             `json:"category_type"`
 	AmountCents     int64              `json:"amount_cents"`
 	Note            pgtype.Text        `json:"note"`
 	TransactionDate pgtype.Date        `json:"transaction_date"`
@@ -122,6 +124,7 @@ func (q *Queries) FindTransactionByID(ctx context.Context, arg FindTransactionBy
 		&i.UserID,
 		&i.CategoryID,
 		&i.CategoryName,
+		&i.CategoryType,
 		&i.AmountCents,
 		&i.Note,
 		&i.TransactionDate,
@@ -132,19 +135,28 @@ func (q *Queries) FindTransactionByID(ctx context.Context, arg FindTransactionBy
 
 const getMonthlySummary = `-- name: GetMonthlySummary :many
 SELECT
-    DATE_TRUNC('month', transaction_date) AS month,
-    SUM(CASE WHEN type = 'income' THEN amount_cents ELSE 0 END) AS total_income,
-    SUM(CASE WHEN type = 'expense' THEN amount_cents ELSE 0 END) AS total_expense
-FROM transactions
-WHERE user_id = $1
+    DATE_TRUNC('month', t.transaction_date)::DATE AS month,
+
+    COALESCE(
+        SUM(CASE WHEN c.type = 'income' THEN t.amount_cents ELSE 0 END),
+        0
+    ) AS total_income,
+
+    COALESCE(
+        SUM(CASE WHEN c.type = 'expense' THEN t.amount_cents ELSE 0 END),
+        0
+    ) AS total_expense
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = $1
 GROUP BY month
-ORDER BY month DESC
+ORDER BY month
 `
 
 type GetMonthlySummaryRow struct {
-	Month        pgtype.Interval `json:"month"`
-	TotalIncome  int64           `json:"total_income"`
-	TotalExpense int64           `json:"total_expense"`
+	Month        pgtype.Date `json:"month"`
+	TotalIncome  interface{} `json:"total_income"`
+	TotalExpense interface{} `json:"total_expense"`
 }
 
 func (q *Queries) GetMonthlySummary(ctx context.Context, userID pgtype.UUID) ([]GetMonthlySummaryRow, error) {
@@ -169,10 +181,11 @@ func (q *Queries) GetMonthlySummary(ctx context.Context, userID pgtype.UUID) ([]
 
 const getTransactionSummary = `-- name: GetTransactionSummary :one
 SELECT
-    COALESCE(SUM(CASE WHEN type = 'income' THEN amount_cents ELSE 0 END), 0) AS total_income,
-    COALESCE(SUM(CASE WHEN type = 'expense' THEN amount_cents ELSE 0 END), 0) AS total_expense
-FROM transactions
-WHERE user_id = $1
+    COALESCE(SUM(CASE WHEN c.type = 'income' THEN t.amount_cents ELSE 0 END), 0) AS total_income,
+    COALESCE(SUM(CASE WHEN c.type = 'expense' THEN t.amount_cents ELSE 0 END), 0) AS total_expense
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE t.user_id = $1
 `
 
 type GetTransactionSummaryRow struct {
@@ -193,6 +206,7 @@ SELECT
     t.user_id,
     t.category_id,
     c.name AS category_name,
+    c.type AS category_type,
     t.amount_cents,
     t.note,
     t.transaction_date,
@@ -208,6 +222,7 @@ type ListTransactionsByUserRow struct {
 	UserID          pgtype.UUID        `json:"user_id"`
 	CategoryID      pgtype.UUID        `json:"category_id"`
 	CategoryName    string             `json:"category_name"`
+	CategoryType    string             `json:"category_type"`
 	AmountCents     int64              `json:"amount_cents"`
 	Note            pgtype.Text        `json:"note"`
 	TransactionDate pgtype.Date        `json:"transaction_date"`
@@ -228,6 +243,7 @@ func (q *Queries) ListTransactionsByUser(ctx context.Context, userID pgtype.UUID
 			&i.UserID,
 			&i.CategoryID,
 			&i.CategoryName,
+			&i.CategoryType,
 			&i.AmountCents,
 			&i.Note,
 			&i.TransactionDate,
@@ -241,4 +257,57 @@ func (q *Queries) ListTransactionsByUser(ctx context.Context, userID pgtype.UUID
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTransaction = `-- name: UpdateTransaction :one
+UPDATE transactions
+SET
+    category_id = $1,
+    amount_cents = $2,
+    note = $3,
+    transaction_date = $4,
+    updated_at = NOW()
+WHERE id = $5
+  AND user_id = $6
+RETURNING
+    id,
+    user_id,
+    category_id,
+    amount_cents,
+    note,
+    transaction_date,
+    created_at,
+    updated_at
+`
+
+type UpdateTransactionParams struct {
+	CategoryID      pgtype.UUID `json:"category_id"`
+	AmountCents     int64       `json:"amount_cents"`
+	Note            pgtype.Text `json:"note"`
+	TransactionDate pgtype.Date `json:"transaction_date"`
+	ID              pgtype.UUID `json:"id"`
+	UserID          pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionParams) (Transaction, error) {
+	row := q.db.QueryRow(ctx, updateTransaction,
+		arg.CategoryID,
+		arg.AmountCents,
+		arg.Note,
+		arg.TransactionDate,
+		arg.ID,
+		arg.UserID,
+	)
+	var i Transaction
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.CategoryID,
+		&i.AmountCents,
+		&i.Note,
+		&i.TransactionDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
