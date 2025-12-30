@@ -1,0 +1,190 @@
+# Expense Tracker API
+
+Expense Tracker API is a backend service designed to record, manage, and analyze users' financial transactions, including **income** and **expenses**, in a structured and scalable way. This project is built with a clean architecture approach and follows modern backend best practices using **Golang**.
+
+---
+
+## 🚀 Key Features
+
+* 🔐 User authentication & authorization (JWT)
+* 👤 User management
+* 🗂️ Transaction category management (income & expense)
+* 💸 Financial transaction recording
+* 📊 Monthly financial summary
+* 🧮 Income & expense aggregation per month
+* 🏗️ Clean Architecture (Handler → Service → Repository)
+
+---
+
+## 🛠️ Tech Stack
+
+* **Language**: Go (Golang)
+* **HTTP Framework**: net/http
+* **Database**: PostgreSQL
+* **SQL Generator**: sqlc
+* **Migration Tool**: golang-migrate
+* **Authentication**: JWT
+* **UUID Handling**: pgx / pgtype
+* **Containerization**: Docker (optional)
+
+---
+
+## 📁 Project Structure
+
+```
+.
+├── cmd/                # Application entry point
+├── internal/
+│   ├── handler/        # HTTP handlers (request & response)
+│   ├── service/        # Business logic layer
+│   ├── repository/     # Database access layer (sqlc)
+│   ├── middleware/     # Authentication & middleware
+│   └── config/         # Configuration & environment setup
+├── db/
+│   ├── migrations/     # Database migrations
+│   └── query/          # SQL queries (sqlc)
+├── pkg/                # Shared helpers & utilities
+├── .env.example
+├── go.mod
+└── README.md
+```
+
+---
+
+## 🧩 Database Schema (Simplified)
+
+### users
+
+* id (uuid)
+* first_name
+* last_name
+* email
+* password
+* created_at
+
+### categories
+
+* id (uuid)
+* user_id
+* name
+* type (income | expense)
+* created_at
+
+### transactions
+
+* id (uuid)
+* user_id
+* category_id
+* amount_cents
+* note
+* transaction_date (DATE)
+* created_at
+
+---
+
+## 📊 Monthly Summary
+
+This endpoint provides a monthly financial overview for a user.
+
+**Example response:**
+
+```json
+[
+  {
+    "month": "2025-01",
+    "total_income": 15000000,
+    "total_expense": 8200000
+  }
+]
+```
+
+---
+
+## 🔌 API Endpoints (Sample)
+
+### Authentication
+
+* `POST /api/v1/register`
+* `POST /api/v1/login`
+
+### Categories
+
+* `POST /api/v1/categories`
+* `GET /api/v1/categories`
+* `DELETE /api/v1/categories/{id}`
+
+### Transactions
+
+* `POST /api/v1/transactions`
+* `GET /api/v1/transactions`
+
+### Summary
+
+* `GET /api/v1/month-summary`
+
+---
+
+## ⚙️ How to Run the Project
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/username/expense-tracker.git
+cd expense-tracker
+```
+
+### 2. Configure Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+Update the database configuration inside the `.env` file.
+
+### 3. Run Database Migrations
+
+```bash
+migrate -path db/migrations -database "postgres://user:password@localhost:5432/dbname?sslmode=disable" up
+```
+
+### 4. Start the Server
+
+```bash
+go run cmd/main.go
+```
+
+The server will be available at:
+
+```
+http://localhost:8080
+```
+
+---
+
+## ✅ Best Practices Applied
+
+* Clear separation of concerns
+* Context-aware request handling
+* Strong typing using sqlc
+* Proper error wrapping (`fmt.Errorf("%w")`)
+* Monetary values stored using `amount_cents` to avoid floating-point errors
+
+---
+
+## 📌 Notes
+
+* All monetary values are stored in **cents** for accuracy
+* Month formatting is handled from `time.Time` to `YYYY-MM` at the response layer
+
+---
+
+## 👨‍💻 Author
+
+**Ilham Suryana**
+Backend Developer (Golang)
+
+---
+
+## 📄 License
+
+MIT License
